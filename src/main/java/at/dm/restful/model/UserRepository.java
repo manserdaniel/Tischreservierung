@@ -27,9 +27,6 @@ public class UserRepository implements Repository<User> {
             while (result.next()) {
                 User tempUser = new User(result.getString("email"), result.getString("password"));
                 tempUser.setId(result.getInt("id"));
-                Token token = new Token();
-                token.setToken(result.getString("token"));
-                tempUser.setToken(token);
                 user.add(tempUser);
             }
 
@@ -55,9 +52,6 @@ public class UserRepository implements Repository<User> {
             while (result.next()) {
                 user = new User(result.getString("email"), result.getString("password"));
                 user.setId(result.getInt("id"));
-                Token token = new Token();
-                token.setToken(result.getString("token"));
-                user.setToken(token);
             }
 
         } catch (SQLException throwables) {

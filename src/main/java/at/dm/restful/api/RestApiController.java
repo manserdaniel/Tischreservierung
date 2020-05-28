@@ -1,11 +1,13 @@
 package at.dm.restful.api;
 import java.util.List;
+import java.util.Optional;
 
 import at.dm.restful.model.Reservation;
 import at.dm.restful.model.Restaurant;
-import at.dm.restful.model.Token;
 import at.dm.restful.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin
@@ -58,7 +60,7 @@ public class RestApiController {
     }
 
     @PostMapping("/authenticate")
-    public Token checkUser(@RequestBody User user) {
+    public Optional<String> checkUser(@RequestBody User user) {
         return userService.login(user);
     }
 
@@ -73,28 +75,32 @@ public class RestApiController {
     }
 
     @PostMapping("/reservations")
-    public void addReservation(@RequestBody Reservation reservation, @RequestHeader(value="Authorization") String token, @RequestHeader(value="email") String email) {
-        Token tempToken = new Token();
-        String[] bearerToken = token.split(" ");
-        tempToken.setToken(bearerToken[1]);
+    public ResponseEntity addReservation(@RequestBody Reservation reservation, @RequestHeader(value="Authorization") String token) {
+        String bearerToken = token.split(" ")[1];
 
-        if (userService.checkLogin(email, tempToken.getToken())) {
+        if (token == "") {
+            return new ResponseEntity(HttpStatus.FORBIDDEN);
+        } else if (userService.checkToken(bearerToken)) {
             reservationService.addReservation(reservation);
             reservationService.updateList();
+            return new ResponseEntity(HttpStatus.ACCEPTED);
         }
+        return new ResponseEntity(HttpStatus.ALREADY_REPORTED);
     }
 
     @CrossOrigin
     @PutMapping("/reservations/{id}")
-    public void changeReservation(@PathVariable int id, @RequestBody int amountSeats, @RequestHeader(value="Authorization") String token, @RequestHeader(value="email") String email) {
-        Token tempToken = new Token();
-        String[] bearerToken = token.split(" ");
-        tempToken.setToken(bearerToken[1]);
+    public ResponseEntity changeReservation(@PathVariable int id, @RequestHeader(value="Authorization") String token, @RequestBody Reservation reservation) {
+        String bearerToken = token.split(" ")[1];
 
-        if (userService.checkLogin(email, tempToken.getToken())) {
-            reservationService.updateReservation(id, amountSeats);
+        if (token == "") {
+            return new ResponseEntity(HttpStatus.FORBIDDEN);
+        } else if (userService.checkToken(bearerToken)) {
+            reservationService.updateReservation(id, reservation.getAmountSeats());
             reservationService.updateList();
+            return new ResponseEntity(HttpStatus.ACCEPTED);
         }
+        return new ResponseEntity(HttpStatus.ALREADY_REPORTED);
     }
 
     @DeleteMapping("/reservations/{id}")
@@ -102,4 +108,5 @@ public class RestApiController {
         reservationService.deleteReservation(id);
         reservationService.updateList();
     }
+
 }

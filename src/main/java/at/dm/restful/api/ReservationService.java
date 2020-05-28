@@ -2,10 +2,8 @@ package at.dm.restful.api;
 
 import at.dm.restful.model.Reservation;
 import at.dm.restful.model.ReservationRepository;
-import at.dm.restful.model.Restaurant;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service

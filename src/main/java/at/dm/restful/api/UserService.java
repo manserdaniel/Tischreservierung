@@ -1,42 +1,22 @@
 package at.dm.restful.api;
 
 import at.dm.restful.model.*;
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTCreationException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
+import javax.xml.bind.DatatypeConverter;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Scanner;
+import java.util.Optional;
 
 @Service
 public class UserService {
     UserRepository userRepository = new UserRepository();
     List<User> users = userRepository.findAll();
 
-    /*
-    RSAPrivateKey privateKey = (RSAPrivateKey) getRSAPrivateKeyFromFile(); //Get the key instance
-
-    public String getRSAPrivateKeyFromFile() {
-        String data = null;
-        try {
-            File myObj = new File("jwtRS256.key");
-            Scanner myReader = new Scanner(myObj);
-            while (myReader.hasNextLine()) {
-                data = myReader.nextLine();
-            }
-            myReader.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-        }
-        return data;
-    }*/
+    private static final String SECRET_KEY = "some secret";
 
     public void updateList() {
         users = userRepository.findAll();
@@ -58,55 +38,34 @@ public class UserService {
         userRepository.deleteOne(id);
     }
 
-    public Token login(User user) {
+    public Optional<String> login(User user) {
         User newUser;
-        Token token = new Token();
-        Token failed = new Token();
+        String token = "";
         try {
             newUser = users.stream().filter(u -> u.getEmail().equalsIgnoreCase(user.getEmail())).findFirst().get();
             if (newUser.getPassword().equals(user.getPassword())) {
-                /*
-                try {
-                    Algorithm algorithm = Algorithm.RSA256(null, privateKey);
+                token = generateJWT(newUser);
 
-                    token.setToken(JWT.create()
-                            .withIssuer("auth0")
-                            .sign(algorithm));
-
-                } catch (JWTCreationException exception){
-                    //Invalid Signing configuration / Couldn't convert Claims.
-                }*/
-                if (user.getToken() == null) {
-                    // create new token
-                    token.setToken("basjklfbjklsbngklvsnlakdhfvinasdklvbioadrsjgvbmklsdr");
-                    userRepository.updateToken(newUser.getId(), token.getToken());
-
-                    return token;
-                } else if (newUser.getToken().equals(user.getToken())) {
-                    // get token from userdata
-                    return user.getToken();
-                }
             }
         } catch (NoSuchElementException e) {
-            failed.setToken("failed");
+            return Optional.empty();
+        } finally {
+            return Optional.of(token);
         }
-        return failed;
     }
 
-    public boolean checkLogin(String email, String token) {
-        User user;
+    public boolean checkToken(String token) {
         try {
-            user = users.stream().filter(u -> u.getEmail().equalsIgnoreCase(email)).findFirst().get();
+            Claims claims = Jwts.parser().setSigningKey(DatatypeConverter.parseBase64Binary(SECRET_KEY)).parseClaimsJws(token).getBody();
 
-            if (user.getToken().getToken().equals(token)) {
-                // create new token
-                return true;
-            } else {
-                return false;
-            }
+            return true;
 
         } catch (NoSuchElementException e) {
+            return false;
         }
-        return false;
+    }
+
+    public String generateJWT(User user){
+        return Jwts.builder().setSubject(user.getEmail()).setSubject(user.getPassword().toString()).signWith(SignatureAlgorithm.HS256, DatatypeConverter.parseBase64Binary(SECRET_KEY)).compact();
     }
 }
